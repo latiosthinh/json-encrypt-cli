@@ -58,7 +58,7 @@ ENC_SECRET=your-default-secret-key-here
 Simply run the command with a JSON file path:
 
 ```bash
-npx enc path/to/your/file.json
+npx json-encrypt path/to/your/file.json
 # or
 node bin/enc.js path/to/your/file.json
 ```
@@ -74,17 +74,17 @@ For automated scripts or when you know exactly what you want:
 
 ```bash
 # With explicit parameters
-npx enc path/to/your/file.json --alg aes-256-cbc --secret your-secret-key
+npx json-encrypt path/to/your/file.json --alg aes-256-cbc --secret your-secret-key
 # or
 node bin/enc.js path/to/your/file.json --alg aes-256-cbc --secret your-secret-key
 
 # Using .env defaults (if configured)
-npx enc path/to/your/file.json
+npx json-encrypt path/to/your/file.json
 # or
 node bin/enc.js path/to/your/file.json
 
 # Mix: override algorithm but use .env secret
-npx enc path/to/your/file.json --alg aes-128-cbc
+npx json-encrypt path/to/your/file.json --alg aes-128-cbc
 ```
 
 ### Decryption
@@ -92,7 +92,7 @@ npx enc path/to/your/file.json --alg aes-128-cbc
 #### Interactive Mode (Recommended)
 
 ```bash
-npx dec path/to/your/file.enc
+npx json-decrypt path/to/your/file.enc
 # or
 node bin/dec.js path/to/your/file.enc
 ```
@@ -106,17 +106,17 @@ The tool will prompt you to:
 
 ```bash
 # With explicit parameters
-npx dec path/to/your/file.enc --algorithm aes-256-cbc --secret your-secret-key
+npx json-decrypt path/to/your/file.enc --algorithm aes-256-cbc --secret your-secret-key
 # or
 node bin/dec.js path/to/your/file.enc --algorithm aes-256-cbc --secret your-secret-key --overwrite
 
 # Using .env defaults (if configured)
-npx dec path/to/your/file.enc --overwrite
+npx json-decrypt path/to/your/file.enc --overwrite
 # or
 node bin/dec.js path/to/your/file.enc --overwrite
 
 # Mix: override algorithm but use .env secret
-npx dec path/to/your/file.enc --algorithm aes-128-cbc --overwrite
+npx json-decrypt path/to/your/file.enc --algorithm aes-128-cbc --overwrite
 ```
 
 #### Encryption Options
@@ -202,9 +202,11 @@ node bin/dec.js data.enc --algorithm aes-256-gcm --secret mySecret123
 
 ### 1. CLI Tool (Recommended)
 
-Use the `dec` command to decrypt files directly:
+Use the `json-decrypt` command to decrypt files directly:
 
 ```bash
+npx json-decrypt file.enc --algorithm aes-256-cbc --secret yourSecretKey
+# or
 node bin/dec.js file.enc --algorithm aes-256-cbc --secret yourSecretKey
 ```
 

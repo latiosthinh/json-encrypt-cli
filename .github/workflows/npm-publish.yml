@@ -70,6 +70,14 @@ jobs:
           echo "\nPackage info:"
           npm ls --depth=0
       
+      - name: Debug NPM Authentication
+        run: |
+          echo "Checking npm authentication..."
+          npm whoami || echo "Not authenticated"
+          echo "Registry: $(npm config get registry)"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
       - name: Publish to NPM
         run: npm publish --access public
         env:

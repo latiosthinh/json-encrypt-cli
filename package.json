@@ -5,7 +5,9 @@
   "main": "index.js",
   "bin": {
     "enc": "./bin/enc.js",
-    "dec": "./bin/dec.js"
+    "dec": "./bin/dec.js",
+    "json-batch-encrypt": "./bin/batch-enc.js",
+    "json-batch-decrypt": "./bin/batch-dec.js"
   },
   "scripts": {
     "start": "node bin/enc.js",

@@ -216,29 +216,33 @@ Use the generated `decryption.example.ts` file as a reference to decrypt your fi
 
 **Encrypt entire directories:**
 ```bash
-# Batch encrypt all JSON files in a directory
-node bin/batch-enc.js /path/to/directory
+# Using npx (recommended)
+npx json-batch-encrypt /path/to/directory
+npx json-batch-encrypt /path/to/directory --recursive
 
-# Include subdirectories recursively
+# Using node directly
+node bin/batch-enc.js /path/to/directory
 node bin/batch-enc.js /path/to/directory --recursive
 
 # Use specific algorithm and secret
-node bin/batch-enc.js /path/to/directory --alg aes-256-gcm --secret mySecret
+npx json-batch-encrypt /path/to/directory --alg aes-256-gcm --secret mySecret
 
 # Use .env defaults (recommended)
-node bin/batch-enc.js /path/to/directory --recursive
+npx json-batch-encrypt /path/to/directory --recursive
 ```
 
 **Decrypt entire directories:**
 ```bash
-# Batch decrypt all .enc files in a directory
-node bin/batch-dec.js /path/to/directory --overwrite
+# Using npx (recommended)
+npx json-batch-decrypt /path/to/directory --overwrite
+npx json-batch-decrypt /path/to/directory --recursive --overwrite
 
-# Include subdirectories recursively
+# Using node directly
+node bin/batch-dec.js /path/to/directory --overwrite
 node bin/batch-dec.js /path/to/directory --recursive --overwrite
 
 # Use specific algorithm and secret
-node bin/batch-dec.js /path/to/directory --algorithm aes-256-gcm --secret mySecret --overwrite
+npx json-batch-decrypt /path/to/directory --algorithm aes-256-gcm --secret mySecret --overwrite
 ```
 
 ### 4. npm Scripts

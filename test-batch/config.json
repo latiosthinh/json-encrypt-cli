@@ -1,0 +1,23 @@
+{
+  "application": {
+    "name": "JSON Encryption Tool",
+    "version": "1.0.0",
+    "environment": "production"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "app_db",
+    "ssl": true
+  },
+  "security": {
+    "encryption": {
+      "algorithm": "aes-256-gcm",
+      "keyRotationDays": 30
+    },
+    "authentication": {
+      "tokenExpiry": "24h",
+      "refreshTokenExpiry": "7d"
+    }
+  }
+}

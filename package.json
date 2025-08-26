@@ -13,7 +13,11 @@
     "demo": "node bin/enc.js test/accounts.prep.json --alg aes-256-cbc --secret demoSecret123",
     "demo-decrypt": "node bin/dec.js test/accounts.prep.enc --algorithm aes-256-cbc --secret demoSecret123 --overwrite",
     "demo-env": "node bin/enc.js test/accounts.prep.json",
-    "demo-env-decrypt": "node bin/dec.js test/accounts.prep.enc --overwrite"
+    "demo-env-decrypt": "node bin/dec.js test/accounts.prep.enc --overwrite",
+    "batch-encrypt": "node bin/batch-enc.js",
+    "batch-decrypt": "node bin/batch-dec.js",
+    "demo-batch": "node bin/batch-enc.js test --recursive",
+    "demo-batch-decrypt": "node bin/batch-dec.js test --recursive --overwrite"
   },
   "keywords": ["encryption", "json", "cli", "crypto"],
   "author": "",

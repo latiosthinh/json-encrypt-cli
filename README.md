@@ -9,6 +9,7 @@ A command-line tool to encrypt JSON files using various encryption algorithms wi
 - 🔑 **Secure Key Derivation**: Uses scrypt for robust key generation from passwords
 - 🎲 **Random IV Generation**: Each encryption uses a unique initialization vector
 - 📁 **Structured Output**: Creates `.enc` files with organized encrypted data
+- 📦 **Batch Processing**: Encrypt/decrypt entire directories of JSON files at once
 - 📝 **Auto-generated Examples**: Provides TypeScript decryption code examples
 - 🛡️ **Data Integrity**: GCM mode includes authentication tags for tamper detection
 - 🔒 **Algorithm Concealment**: Encrypted files don't expose the algorithm used for maximum security
@@ -211,7 +212,36 @@ node bin/dec.js file.enc --algorithm aes-256-cbc --secret yourSecretKey
 
 Use the generated `decryption.example.ts` file as a reference to decrypt your files programmatically in your own code.
 
-### 3. npm Scripts
+### 3. Batch Processing
+
+**Encrypt entire directories:**
+```bash
+# Batch encrypt all JSON files in a directory
+node bin/batch-enc.js /path/to/directory
+
+# Include subdirectories recursively
+node bin/batch-enc.js /path/to/directory --recursive
+
+# Use specific algorithm and secret
+node bin/batch-enc.js /path/to/directory --alg aes-256-gcm --secret mySecret
+
+# Use .env defaults (recommended)
+node bin/batch-enc.js /path/to/directory --recursive
+```
+
+**Decrypt entire directories:**
+```bash
+# Batch decrypt all .enc files in a directory
+node bin/batch-dec.js /path/to/directory --overwrite
+
+# Include subdirectories recursively
+node bin/batch-dec.js /path/to/directory --recursive --overwrite
+
+# Use specific algorithm and secret
+node bin/batch-dec.js /path/to/directory --algorithm aes-256-gcm --secret mySecret --overwrite
+```
+
+### 4. npm Scripts
 
 ```bash
 # Test the tools
@@ -228,4 +258,8 @@ npm run demo-env
 
 # Demo decryption using .env defaults
 npm run demo-env-decrypt
+
+# Batch processing demos
+npm run demo-batch          # Batch encrypt test directory
+npm run demo-batch-decrypt  # Batch decrypt test directory
 ```

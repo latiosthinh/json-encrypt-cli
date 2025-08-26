@@ -1,0 +1,28 @@
+{
+  "products": [
+    {
+      "id": "prod-001",
+      "name": "Wireless Headphones",
+      "price": 99.99,
+      "category": "Electronics",
+      "inStock": true,
+      "specifications": {
+        "battery": "20 hours",
+        "connectivity": "Bluetooth 5.0",
+        "weight": "250g"
+      }
+    },
+    {
+      "id": "prod-002",
+      "name": "Smart Watch",
+      "price": 299.99,
+      "category": "Wearables",
+      "inStock": false,
+      "specifications": {
+        "display": "1.4 inch OLED",
+        "battery": "7 days",
+        "waterproof": "IP68"
+      }
+    }
+  ]
+}

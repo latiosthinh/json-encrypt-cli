@@ -4,10 +4,10 @@
   "description": "A CLI tool to encrypt JSON files with various algorithms",
   "main": "index.js",
   "bin": {
-    "json-encrypt": "bin/enc.js",
-    "json-decrypt": "bin/dec.js",
-    "json-batch-encrypt": "bin/batch-enc.js",
-    "json-batch-decrypt": "bin/batch-dec.js"
+    "json-encrypt": "./bin/enc.js",
+    "json-decrypt": "./bin/dec.js",
+    "json-batch-encrypt": "./bin/batch-enc.js",
+    "json-batch-decrypt": "./bin/batch-dec.js"
   },
   "scripts": {
     "start": "node bin/enc.js",

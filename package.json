@@ -1,0 +1,29 @@
+{
+  "name": "json-encrypt-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool to encrypt JSON files with various algorithms",
+  "main": "index.js",
+  "bin": {
+    "enc": "./bin/enc.js",
+    "dec": "./bin/dec.js"
+  },
+  "scripts": {
+    "start": "node bin/enc.js",
+    "test": "node test-encryption.js",
+    "demo": "node bin/enc.js test/accounts.prep.json --alg aes-256-cbc --secret demoSecret123",
+    "demo-decrypt": "node bin/dec.js test/accounts.prep.enc --algorithm aes-256-cbc --secret demoSecret123 --overwrite",
+    "demo-env": "node bin/enc.js test/accounts.prep.json",
+    "demo-env-decrypt": "node bin/dec.js test/accounts.prep.enc --overwrite"
+  },
+  "keywords": ["encryption", "json", "cli", "crypto"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -1,0 +1,76 @@
+# Multi-stage Dockerfile for applications using encrypted JSON configs
+# This example shows how to decrypt .enc files during Docker build
+
+# Stage 1: Decryption stage
+FROM node:18-alpine AS decryption
+
+# Install json-encrypt-cli
+WORKDIR /decrypt
+COPY package*.json ./
+RUN npm ci
+
+# Copy encrypted files
+COPY . .
+
+# Decrypt configuration files
+# Note: ENC_SECRET should be passed as build arg for security
+ARG ENC_SECRET
+ARG ENC_ALGORITHM=aes-256-gcm
+
+RUN echo "ENC_ALGORITHM=${ENC_ALGORITHM}" > .env && \
+    echo "ENC_SECRET=${ENC_SECRET}" >> .env
+
+# Decrypt all .enc files
+RUN find . -name "*.enc" -type f | while read -r file; do \
+        dir=$(dirname "$file"); \
+        echo "Decrypting files in: $dir"; \
+        npx json-batch-decrypt "$dir" --overwrite; \
+    done
+
+# Verify decrypted files are valid JSON
+RUN find . -name "*.json" -type f | while read -r file; do \
+        if ! node -e "JSON.parse(require('fs').readFileSync('$file', 'utf8'))"; then \
+            echo "Invalid JSON file: $file"; \
+            exit 1; \
+        fi; \
+    done
+
+# Stage 2: Production stage
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code (excluding .enc files)
+COPY --from=decryption /decrypt . 
+RUN find . -name "*.enc" -delete
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Change ownership of the app directory
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node healthcheck.js || exit 1
+
+# Start the application
+CMD ["npm", "start"]
+
+# Build instructions:
+# docker build --build-arg ENC_SECRET="your-secret-key" -t myapp .
+# 
+# For production, use Docker secrets or external secret management:
+# echo "your-secret-key" | docker secret create enc_secret -
+# docker service create --secret enc_secret myapp

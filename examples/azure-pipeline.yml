@@ -1,0 +1,225 @@
+# Azure DevOps Pipeline for Deployment with JSON Decryption
+# This pipeline demonstrates how to decrypt .enc files during deployment
+# when original JSON files are not committed to the repository
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - release/*
+
+variables:
+  # Define environment-specific variable groups
+  - group: 'encryption-secrets-staging'  # Contains ENCRYPTION_SECRET for staging
+  - group: 'encryption-secrets-prod'     # Contains ENCRYPTION_SECRET for production
+  - name: nodeVersion
+    value: '18.x'
+
+stages:
+  # Staging Deployment
+  - stage: DeployStaging
+    displayName: 'Deploy to Staging'
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    variables:
+      - group: 'encryption-secrets-staging'
+    jobs:
+      - job: DecryptAndDeploy
+        displayName: 'Decrypt JSON and Deploy'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: NodeTool@0
+            displayName: 'Setup Node.js'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          - script: |
+              npm ci
+            displayName: 'Install Dependencies'
+
+          - script: |
+              echo "Decrypting configuration files for staging..."
+              # Decrypt all .enc files recursively
+              npx json-batch-decrypt . --recursive
+              
+              # Verify decrypted files exist and are valid JSON
+              echo "Verifying decrypted JSON files..."
+              find . -name "*.json" -not -path "./node_modules/*" -exec echo "Checking: {}" \; -exec node -e "JSON.parse(require('fs').readFileSync('{}', 'utf8')); console.log('✓ Valid JSON')" \;
+            displayName: 'Decrypt Configuration Files'
+            env:
+              ENCRYPTION_SECRET: $(ENCRYPTION_SECRET)
+
+          - script: |
+              echo "Building application..."
+              npm run build
+            displayName: 'Build Application'
+
+          - script: |
+              echo "Deploying to staging environment..."
+              # Add your staging deployment commands here
+              # Example: deploy to Azure App Service, Kubernetes, etc.
+            displayName: 'Deploy to Staging'
+
+          - script: |
+              echo "Cleaning up decrypted files for security..."
+              find . -name "*.json" -not -path "./node_modules/*" -not -name "package*.json" -delete
+            displayName: 'Security Cleanup'
+            condition: always()
+
+  # Production Deployment
+  - stage: DeployProduction
+    displayName: 'Deploy to Production'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: 'encryption-secrets-prod'
+    jobs:
+      - deployment: ProductionDeployment
+        displayName: 'Production Deployment'
+        environment: 'production'
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout Repository'
+
+                - task: NodeTool@0
+                  displayName: 'Setup Node.js'
+                  inputs:
+                    versionSpec: $(nodeVersion)
+
+                - script: |
+                    npm ci
+                  displayName: 'Install Dependencies'
+
+                - script: |
+                    echo "Decrypting configuration files for production..."
+                    # Use production encryption secret
+                    npx json-batch-decrypt . --recursive
+                    
+                    # Verify all JSON files are valid
+                    echo "Verifying decrypted JSON files..."
+                    find . -name "*.json" -not -path "./node_modules/*" -exec echo "Checking: {}" \; -exec node -e "JSON.parse(require('fs').readFileSync('{}', 'utf8')); console.log('✓ Valid JSON')" \;
+                  displayName: 'Decrypt Configuration Files'
+                  env:
+                    ENCRYPTION_SECRET: $(ENCRYPTION_SECRET)
+
+                - script: |
+                    echo "Building application for production..."
+                    npm run build
+                  displayName: 'Build Application'
+
+                - script: |
+                    echo "Running production deployment..."
+                    # Add your production deployment commands here
+                    # Examples:
+                    # - Azure App Service deployment
+                    # - Kubernetes deployment
+                    # - Docker container deployment
+                  displayName: 'Deploy to Production'
+
+                - script: |
+                    echo "Cleaning up decrypted files for security..."
+                    find . -name "*.json" -not -path "./node_modules/*" -not -name "package*.json" -delete
+                  displayName: 'Security Cleanup'
+                  condition: always()
+
+  # Docker Build and Push (Optional)
+  - stage: DockerBuild
+    displayName: 'Build and Push Docker Image'
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/develop')))
+    variables:
+      - group: 'encryption-secrets-prod'  # Use production secrets for Docker build
+    jobs:
+      - job: BuildDocker
+        displayName: 'Build Docker Image'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: Docker@2
+            displayName: 'Build Docker Image with Decryption'
+            inputs:
+              command: 'build'
+              dockerfile: 'examples/Dockerfile.example'
+              buildContext: '.'
+              repository: 'myapp'
+              tags: |
+                $(Build.BuildId)
+                latest
+              arguments: '--build-arg ENCRYPTION_SECRET=$(ENCRYPTION_SECRET)'
+
+          - task: Docker@2
+            displayName: 'Push Docker Image'
+            inputs:
+              command: 'push'
+              repository: 'myapp'
+              tags: |
+                $(Build.BuildId)
+                latest
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+# Additional job for testing decryption integrity
+- stage: TestDecryption
+  displayName: 'Test Decryption Integrity'
+  condition: always()
+  variables:
+    - group: 'encryption-secrets-staging'
+  jobs:
+    - job: IntegrityTest
+      displayName: 'Verify Decryption Process'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+
+        - task: NodeTool@0
+          displayName: 'Setup Node.js'
+          inputs:
+            versionSpec: $(nodeVersion)
+
+        - script: |
+            npm ci
+          displayName: 'Install Dependencies'
+
+        - script: |
+            echo "Testing decryption process..."
+            # Count encrypted files
+            ENC_COUNT=$(find . -name "*.enc" -not -path "./node_modules/*" | wc -l)
+            echo "Found $ENC_COUNT encrypted files"
+            
+            # Decrypt files
+            npx json-batch-decrypt . --recursive
+            
+            # Count decrypted JSON files (excluding package.json)
+            JSON_COUNT=$(find . -name "*.json" -not -path "./node_modules/*" -not -name "package*.json" | wc -l)
+            echo "Decrypted $JSON_COUNT JSON files"
+            
+            # Verify counts match
+            if [ "$ENC_COUNT" -eq "$JSON_COUNT" ]; then
+              echo "✓ Decryption integrity verified: All encrypted files were successfully decrypted"
+            else
+              echo "✗ Decryption integrity failed: Mismatch between encrypted and decrypted file counts"
+              exit 1
+            fi
+            
+            # Validate JSON syntax
+            find . -name "*.json" -not -path "./node_modules/*" -not -name "package*.json" -exec echo "Validating: {}" \; -exec node -e "JSON.parse(require('fs').readFileSync('{}', 'utf8')); console.log('✓ Valid JSON syntax')" \;
+          displayName: 'Test Decryption Integrity'
+          env:
+            ENCRYPTION_SECRET: $(ENCRYPTION_SECRET)
+
+        - script: |
+            echo "Cleaning up test files..."
+            find . -name "*.json" -not -path "./node_modules/*" -not -name "package*.json" -delete
+          displayName: 'Cleanup Test Files'
+          condition: always()

@@ -1,0 +1,125 @@
+# GitHub Actions Workflow for Automatic JSON Encryption
+# Place this file in: .github/workflows/encrypt.yml
+
+name: Auto-encrypt JSON files
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/config/**/*.json'
+      - 'data/secrets/**/*.json'
+      - 'config/**/*.json'
+
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/config/**/*.json'
+      - 'data/secrets/**/*.json'
+      - 'config/**/*.json'
+
+jobs:
+  encrypt-sensitive-files:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup encryption environment
+      run: |
+        echo "ENC_ALGORITHM=aes-256-gcm" >> .env
+        echo "ENC_SECRET=${{ secrets.ENCRYPTION_SECRET }}" >> .env
+        
+    - name: Encrypt sensitive JSON files
+      run: |
+        # Encrypt different directories based on your project structure
+        if [ -d "src/config" ]; then
+          npx json-batch-encrypt src/config --recursive
+        fi
+        
+        if [ -d "data/secrets" ]; then
+          npx json-batch-encrypt data/secrets --recursive
+        fi
+        
+        if [ -d "config/production" ]; then
+          npx json-batch-encrypt config/production --recursive
+        fi
+        
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit encrypted files
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "🔐 Auto-encrypt sensitive JSON files [skip ci]"
+        
+    - name: Push changes
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+
+  # Optional: Verify encryption integrity
+  verify-encryption:
+    needs: encrypt-sensitive-files
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Verify encryption integrity
+      run: |
+        echo "🔍 Verifying encrypted files can be decrypted..."
+        
+        # Create a temporary directory for testing
+        mkdir -p temp-decrypt-test
+        
+        # Copy .enc files to temp directory
+        find . -name "*.enc" -exec cp {} temp-decrypt-test/ \;
+        
+        # Test decryption (without overwriting)
+        if [ "$(ls -A temp-decrypt-test)" ]; then
+          cd temp-decrypt-test
+          for file in *.enc; do
+            echo "Testing decryption of: $file"
+            npx json-batch-decrypt . --algorithm aes-256-gcm --secret "${{ secrets.ENCRYPTION_SECRET }}"
+          done
+          echo "✅ All encrypted files verified successfully!"
+        else
+          echo "ℹ️  No encrypted files found to verify"
+        fi
+      env:
+        ENC_SECRET: ${{ secrets.ENCRYPTION_SECRET }}

@@ -245,9 +245,82 @@ node bin/batch-dec.js /path/to/directory --recursive --overwrite
 npx json-batch-decrypt /path/to/directory --algorithm aes-256-gcm --secret mySecret --overwrite
 ```
 
-### 4. npm Scripts
+### 4. Git Integration & Automation
+
+#### 🔗 Pre-commit Hook Setup
+
+Automatically encrypt sensitive JSON files before commits:
+
+**1. Install husky (if not already installed):**
+```bash
+npm install --save-dev husky
+npx husky install
+```
+
+**2. Quick setup (recommended):**
+```bash
+# Interactive setup script
+node examples/setup-git-hooks.js
+```
+
+**3. Manual husky setup:**
+```bash
+npx husky add .husky/pre-commit "npx json-batch-encrypt src/config --recursive && git add ."
+```
+
+**4. Manual hook setup:**
+Copy `examples/pre-commit` to `.git/hooks/pre-commit` and make it executable:
+```bash
+cp examples/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+#### 🚀 CI/CD Integration
+
+**For deployment workflows (when JSON files aren't committed):**
+```bash
+# GitHub Actions
+cp examples/github-actions-deploy.yml .github/workflows/deploy.yml
+
+# Azure DevOps Pipeline
+cp examples/azure-pipeline.yml azure-pipelines.yml
+
+# Copy Docker example
+cp examples/Dockerfile.example Dockerfile
+
+# Read comprehensive CI/CD guide
+cat examples/CICD-GUIDE.md
+```
+
+**Set up GitHub secrets:**
+1. Go to your repository Settings → Secrets and variables → Actions
+2. Add `ENCRYPTION_SECRET` with your encryption key
+
+**Deployment strategies:**
+- **Runtime decryption**: Decrypt files when application starts
+- **Build-time decryption**: Decrypt during CI/CD build process
+- **External secrets**: Use Kubernetes/cloud secret management
+
+**Key workflow features:**
+- Decrypts `.enc` files during deployment
+- Supports multiple environments with different secrets
+- Includes Docker multi-stage builds
+- Provides AWS Lambda deployment examples
+- Ensures cleanup of decrypted files for security
+
+#### 📋 Workflow Recommendations
+
+1. **Development**: Keep `.json` files unencrypted for easy editing
+2. **Pre-commit**: Automatically encrypt sensitive files
+3. **Repository**: Store only `.enc` files for sensitive data
+4. **Deployment**: Decrypt files in CI/CD pipeline
+
+### 5. npm Scripts
 
 ```bash
+# Setup and configuration
+npm run setup-git-hooks     # Interactive Git hooks setup
+
 # Test the tools
 npm test
 

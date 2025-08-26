@@ -1,0 +1,186 @@
+# GitHub Actions Workflow for Deployment with Decryption
+# Place this file in: .github/workflows/deploy.yml
+# This workflow decrypts .enc files during deployment
+
+name: Deploy with JSON Decryption
+
+on:
+  push:
+    branches: [ main, production ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup decryption environment
+      run: |
+        echo "ENC_ALGORITHM=aes-256-gcm" >> .env
+        echo "ENC_SECRET=${{ secrets.ENCRYPTION_SECRET }}" >> .env
+        
+    - name: Decrypt configuration files
+      run: |
+        echo "🔓 Decrypting configuration files for deployment..."
+        
+        # Decrypt all .enc files in the repository
+        find . -name "*.enc" -type f | while read -r file; do
+          dir=$(dirname "$file")
+          echo "📁 Decrypting files in: $dir"
+          npx json-batch-decrypt "$dir" --overwrite
+        done
+        
+        echo "✅ All configuration files decrypted"
+        
+    - name: Verify decrypted files
+      run: |
+        echo "🔍 Verifying decrypted JSON files..."
+        
+        # Check that JSON files are valid
+        find . -name "*.json" -type f | while read -r file; do
+          if ! jq empty "$file" 2>/dev/null; then
+            echo "❌ Invalid JSON file: $file"
+            exit 1
+          else
+            echo "✅ Valid JSON: $file"
+          fi
+        done
+        
+    - name: Build application
+      run: |
+        # Your build commands here
+        npm run build
+        
+    - name: Deploy to staging
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Your staging deployment commands here
+        # The decrypted JSON files are now available for the application
+        
+    - name: Deploy to production
+      if: github.ref == 'refs/heads/production'
+      run: |
+        echo "🚀 Deploying to production environment..."
+        # Your production deployment commands here
+        # The decrypted JSON files are now available for the application
+        
+    - name: Cleanup sensitive files
+      if: always()
+      run: |
+        echo "🧹 Cleaning up decrypted files..."
+        # Remove decrypted JSON files for security
+        find . -name "*.json" -type f -delete
+        rm -f .env
+        echo "✅ Cleanup completed"
+
+  # Optional: Deploy to different environments
+  deploy-docker:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install json-encrypt-cli
+      run: npm install -g .
+      
+    - name: Create deployment directory
+      run: mkdir -p deployment
+      
+    - name: Decrypt files for Docker
+      run: |
+        # Copy .enc files to deployment directory
+        find . -name "*.enc" -exec cp {} deployment/ \;
+        
+        # Decrypt in deployment directory
+        cd deployment
+        for file in *.enc; do
+          npx json-decrypt "$file" --algorithm aes-256-gcm --secret "${{ secrets.ENCRYPTION_SECRET }}" --overwrite
+        done
+        
+        # Remove .enc files, keep only .json
+        rm -f *.enc
+        
+    - name: Build Docker image
+      run: |
+        # Create Dockerfile that copies decrypted JSON files
+        cat > Dockerfile << EOF
+        FROM node:18-alpine
+        WORKDIR /app
+        COPY package*.json ./
+        RUN npm ci --only=production
+        COPY . .
+        COPY deployment/*.json ./config/
+        EXPOSE 3000
+        CMD ["npm", "start"]
+        EOF
+        
+        docker build -t myapp:latest .
+        
+    - name: Deploy Docker container
+      run: |
+        echo "🐳 Deploying Docker container..."
+        # Your Docker deployment commands here
+        # docker push myapp:latest
+        # kubectl apply -f k8s-deployment.yaml
+
+  # Environment-specific deployment
+  deploy-aws:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Decrypt and upload to S3
+      run: |
+        # Decrypt configuration files
+        find . -name "*.enc" -type f | while read -r file; do
+          dir=$(dirname "$file")
+          npx json-batch-decrypt "$dir" --algorithm aes-256-gcm --secret "${{ secrets.ENCRYPTION_SECRET }}" --overwrite
+        done
+        
+        # Upload decrypted configs to S3 (encrypted at rest)
+        aws s3 sync ./config s3://my-app-config-bucket/config/ --exclude "*.enc"
+        
+    - name: Deploy to Lambda
+      run: |
+        # Package and deploy Lambda function
+        # The function will download configs from S3 at runtime
+        zip -r function.zip . -x "*.enc" "*.git*" "node_modules/*"
+        aws lambda update-function-code --function-name my-app --zip-file fileb://function.zip

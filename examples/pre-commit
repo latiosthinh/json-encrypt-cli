@@ -1,0 +1,35 @@
+#!/bin/sh
+# JSON Encryption Pre-commit Hook
+# This script automatically encrypts sensitive JSON files before commits
+
+echo "🔐 Encrypting sensitive JSON files..."
+
+# Define directories containing sensitive JSON files
+# Modify these paths according to your project structure
+SENSITIVE_DIRS=(
+    "src/config"
+    "data/secrets"
+    "config/production"
+)
+
+# Check if any sensitive directories exist and encrypt them
+for dir in "${SENSITIVE_DIRS[@]}"; do
+    if [ -d "$dir" ]; then
+        echo "📁 Encrypting JSON files in: $dir"
+        npx json-batch-encrypt "$dir" --recursive
+        
+        # Check if encryption was successful
+        if [ $? -eq 0 ]; then
+            echo "✅ Successfully encrypted files in $dir"
+            git add "$dir"
+        else
+            echo "❌ Failed to encrypt files in $dir"
+            exit 1
+        fi
+    else
+        echo "⚠️  Directory not found: $dir (skipping)"
+    fi
+done
+
+echo "🎉 Pre-commit encryption completed!"
+exit 0

@@ -19,7 +19,8 @@
     "batch-encrypt": "node bin/batch-enc.js",
     "batch-decrypt": "node bin/batch-dec.js",
     "demo-batch": "node bin/batch-enc.js test --recursive",
-    "demo-batch-decrypt": "node bin/batch-dec.js test --recursive --overwrite"
+    "demo-batch-decrypt": "node bin/batch-dec.js test --recursive --overwrite",
+    "setup-git-hooks": "node examples/setup-git-hooks.js"
   },
   "keywords": ["encryption", "json", "cli", "crypto"],
   "author": "",
